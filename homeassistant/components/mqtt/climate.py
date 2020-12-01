@@ -90,6 +90,7 @@ CONF_HOLD_STATE_TEMPLATE = "hold_state_template"
 CONF_HOLD_STATE_TOPIC = "hold_state_topic"
 CONF_HOLD_LIST = "hold_modes"
 CONF_MODE_COMMAND_TOPIC = "mode_command_topic"
+CONF_MODE_COMMAND_TEMPLATE = "mode_command_template"
 CONF_MODE_LIST = "modes"
 CONF_MODE_STATE_TEMPLATE = "mode_state_template"
 CONF_MODE_STATE_TOPIC = "mode_state_topic"
@@ -125,6 +126,7 @@ TEMPLATE_KEYS = (
     CONF_FAN_MODE_STATE_TEMPLATE,
     CONF_HOLD_STATE_TEMPLATE,
     CONF_MODE_STATE_TEMPLATE,
+    CONF_MODE_COMMAND_TEMPLATE,
     CONF_POWER_STATE_TEMPLATE,
     CONF_ACTION_TEMPLATE,
     CONF_SWING_MODE_STATE_TEMPLATE,
@@ -183,6 +185,7 @@ PLATFORM_SCHEMA = (
             vol.Optional(CONF_HOLD_STATE_TOPIC): mqtt.valid_subscribe_topic,
             vol.Optional(CONF_HOLD_LIST, default=list): cv.ensure_list,
             vol.Optional(CONF_MODE_COMMAND_TOPIC): mqtt.valid_publish_topic,
+            vol.Optional(CONF_MODE_COMMAND_TEMPLATE): cv.template,
             vol.Optional(
                 CONF_MODE_LIST,
                 default=[
@@ -751,7 +754,10 @@ class MqttClimate(
         elif self._current_operation != HVAC_MODE_OFF and hvac_mode == HVAC_MODE_OFF:
             self._publish(CONF_POWER_COMMAND_TOPIC, self._config[CONF_PAYLOAD_OFF])
 
-        self._publish(CONF_MODE_COMMAND_TOPIC, hvac_mode)
+        """Transform output MQTT message based on template for those devices that require custom payload messages"""    
+        template = self._value_templates[CONF_MODE_COMMAND_TEMPLATE]
+        payload = template(hvac_mode)
+        self._publish(CONF_MODE_COMMAND_TOPIC, payload)
 
         if self._topic[CONF_MODE_STATE_TOPIC] is None:
             self._current_operation = hvac_mode
